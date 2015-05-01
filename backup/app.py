@@ -18,7 +18,7 @@ dst = '/mnt/dst/finance'
 #CRYPTO-LOCKER FILES (PRIMITIVE)
 def initialize():
 
-    print("\n\nBACKUP APP v 0.1")
+    print("\n\nBACKUP APP version 0.1")
     print("----------------\n\n")
     print("[+] Initializing...\n")
     
