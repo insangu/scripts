@@ -38,7 +38,7 @@ def initialize():
         sleep(2)
         src_check(src)
     except:
-        print("[!] Failed to run src_check(). Exiting script")
+        print("[!] Failed to run src_check(). Exiting script!")
         #EMAIL ALERT
         sys.exit()
     
@@ -48,7 +48,7 @@ def initialize():
         sleep(2)
         dst_check(dst)
     except:
-        print("[!] Failed to run dst_check(). Exiting script")
+        print("[!] Failed to run dst_check(). Exiting script!")
         #EMAIL ALERT
         sys.exit()
     
@@ -79,7 +79,7 @@ def backup():
     #CHECK FILE CONSISTENCY BETWEEN SRC AND DST LOCATIONS
     print("\n[+] Verifying consistency between (%s) and (%s)..." % (src,dst))
     src_count, dst_count, consistency = rsync_filecount(src,dst)
-    print("[+] Consistency check complete.\n")
+    print("[+] Consistency check completed.\n")
     sleep(2)
     
     #DISC STATS FOR SRC
