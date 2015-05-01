@@ -4,19 +4,6 @@ import smtplib, datetime
 from time import sleep
 from email.mime.text import MIMEText
 
-#EMAIL ALERT + WITH A LOG FILE INCLUDED
-def emailAlert(status):
-    
-    msg = MIMEText('Testing email')
-    
-    msg['Subject'] = ("(%s) Test Email @ " % status) + (datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y"))
-    msg['From'] = 'help@cosol.com.au'
-    msg['To'] = 'milan.vuckovecki@cosol.com.au'
-    
-    s = smtplib.SMTP('localhost')
-    s.sendmail('help@cosol.com.au', ['milan.vuckovecki@cosol.com.au'], msg.as_string())
-    s.quit()
-
 #AIMS TO TEST ONLINE CONNECTIVITY TO SRC HOST
 def ping_check(host):
     cmd = ('ping -c 3 %s' % host)
@@ -49,31 +36,6 @@ def ping_check(host):
         #DECIDE TO EITHER RETRY OR QUIT...
         sys.exit()
 
-#DST DIRECTORY CHECK FUNCTION - ENSURE LOCAL DIR EXISTS, IF NOT ATTEMPT REPAIR.
-def dst_check(dst):
-    try:
-        if os.path.exists(dst):
-            print("[+] Destination (%s) is OK." % dst)
-            sleep(2)
-        else:
-            print("[!] Destination (%s) not found." % dst)
-            sleep(1)
-            print("[?] Attempting to repair (%s) destination location..." % dst)
-            sleep(2)
-            
-            try:
-                os.mkdir(dst)
-                print("[+] Repair was successful. Destination (%s) is now available." % dst)
-                sleep(2)
-            except:
-                print("[!] Unable to repair destination (%s). Exiting script." % dst)
-                #EMAIL ALERT
-                sys.exit()                
-    except:
-        print("[!] dst_check() function failed!")
-        #EMAIL ALERT
-        sys.exit()
-
 #SRC DIRECTORY CHECK FUNCTION - ENSURE MOUNT POINT EXISTS, IF NOT ATTEMPT REPAIR.
 def src_check(src): 
     try:
@@ -102,6 +64,33 @@ def src_check(src):
         print("[!] Executing mount_check() function failed!")
         #EMAIL ALERT
         sys.exit()
+
+#DST DIRECTORY CHECK FUNCTION - ENSURE LOCAL DIR EXISTS, IF NOT ATTEMPT REPAIR.
+def dst_check(dst):
+    try:
+        if os.path.exists(dst):
+            print("[+] Destination (%s) is OK." % dst)
+            sleep(2)
+        else:
+            print("[!] Destination (%s) not found." % dst)
+            sleep(1)
+            print("[?] Attempting to repair (%s) destination location..." % dst)
+            sleep(2)
+            
+            try:
+                os.mkdir(dst)
+                print("[+] Repair was successful. Destination (%s) is now available." % dst)
+                sleep(2)
+            except:
+                print("[!] Unable to repair destination (%s). Exiting script." % dst)
+                #EMAIL ALERT
+                sys.exit()                
+    except:
+        print("[!] dst_check() function failed!")
+        #EMAIL ALERT
+        sys.exit()
+
+
 
 # CHECKS SRC DIRECTORY FOR CRYPTO-LOCKER FILES/EXTENSIONS
 def crypto_check(src):
@@ -135,6 +124,55 @@ def crypto_check(src):
         sleep(1)
         print("[+] No. of scanned files: %d" % clean)
         sleep(2)
+
+#RSYNC BACKUP
+def rsync(src, dst):
+    
+    #RSYNC COMMAND TO BE EXECUTED
+    rsync_command = ("rsync -arvh --dry-run --delete-after %s %s" % (src,dst))
+
+    #RUN RSYNC
+    try:
+        rsync = subprocess.Popen([rsync_command], shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = rsync.communicate()
+
+        if stdout: #IF NO ERRORS ARE FOUND
+            output = stdout.split('\n')
+                        
+            for line in output:
+                
+                re_sent = re.search(r'sent\s(\d+\s\w+)|sent\s(\d+.\d+\w+)', line)
+                re_received = re.search(r'received\s(\d+\s\w+)|received\s(\d+.\d+\w+)', line)
+                re_size = re.search(r'size\s\is\s(\d+\s\w+)|size\s\is\s(\d+.\d+\w+)', line)
+                re_speed = re.search(r'(\d+.\d+\w+)\sbytes/sec', line)
+                
+                if re_sent:
+                    a = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_sent.group())
+                    sent = a.group()
+                if re_received:
+                    b = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_received.group())
+                    received = b.group()
+                if re_size:
+                    c = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_size.group())
+                    size = c.group()
+                if re_speed:
+                    speed = re_speed.group()
+                    
+                    
+            return sent, received, size, speed
+            
+        if stderr: #IF ERRORS ARE FOUND
+            print ("[!] RSYNC Backup failed!")
+            print ("[!] Error: ")
+            print (stderr) #PACKAGE THIS FOR EMAILING...
+            #EMAIL ALERT
+            #sys.exit()
+            
+
+    except:#IF TOTAL FAILURE
+        print("ERROR: rsync() failed to run, exiting script!\n")
+        #SEND EMAIL
+        sys.exit()
 
 def rsync_filecount(src,dst):
     
@@ -193,52 +231,18 @@ def free_space(location):
     except:
         print("[!] free_space() failed to execute!")
         
-#RSYNC BACKUP
-def rsync(src, dst):
+
+
+#EMAIL ALERT + WITH A LOG FILE INCLUDED
+def emailAlert(status):
     
-    #RSYNC COMMAND TO BE EXECUTED
-    rsync_command = ("rsync -arvh --dry-run --delete-after %s %s" % (src,dst))
-
-    #RUN RSYNC
-    try:
-        rsync = subprocess.Popen([rsync_command], shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        stdout, stderr = rsync.communicate()
-
-        if stdout: #IF NO ERRORS ARE FOUND
-            output = stdout.split('\n')
-                        
-            for line in output:
-                
-                re_sent = re.search(r'sent\s(\d+\s\w+)|sent\s(\d+.\d+\w+)', line)
-                re_received = re.search(r'received\s(\d+\s\w+)|received\s(\d+.\d+\w+)', line)
-                re_size = re.search(r'size\s\is\s(\d+\s\w+)|size\s\is\s(\d+.\d+\w+)', line)
-                re_speed = re.search(r'(\d+.\d+\w+)\sbytes/sec', line)
-                
-                if re_sent:
-                    a = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_sent.group())
-                    sent = a.group()
-                if re_received:
-                    b = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_received.group())
-                    received = b.group()
-                if re_size:
-                    c = re.search(r'(\d+\s\w+)|(\d+.\d+\w+)', re_size.group())
-                    size = c.group()
-                if re_speed:
-                    speed = re_speed.group()
-                    
-                    
-            return sent, received, size, speed
-            
-        if stderr: #IF ERRORS ARE FOUND
-            print ("[!] RSYNC Backup failed!")
-            print ("[!] Error: ")
-            print (stderr) #PACKAGE THIS FOR EMAILING...
-            #EMAIL ALERT
-            #sys.exit()
-            
-
-    except:#IF TOTAL FAILURE
-        print("ERROR: rsync() failed to run, exiting script!\n")
-        #SEND EMAIL
-        sys.exit()
+    msg = MIMEText('Testing email')
+    
+    msg['Subject'] = ("(%s) Test Email @ " % status) + (datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y"))
+    msg['From'] = 'help@cosol.com.au'
+    msg['To'] = 'milan.vuckovecki@cosol.com.au'
+    
+    s = smtplib.SMTP('localhost')
+    s.sendmail('help@cosol.com.au', ['milan.vuckovecki@cosol.com.au'], msg.as_string())
+    s.quit()
         
