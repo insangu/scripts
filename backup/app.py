@@ -134,8 +134,3 @@ def backup():
 
 if __name__ == '__main__':
     initialize()
-    #backup()
-    #emailAlert('Good')
-    #test(src,dst)
-    #rsync(src,dst)
-    #rsync2(src,dst)
